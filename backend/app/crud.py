@@ -235,11 +235,20 @@ def evaluate_test(
             total_fill += 1
 
         user_ans = submitted.get(q_id, "").strip()
+        user_ans_text = user_ans
+        
         if not user_ans:
             unanswered_count += 1
             is_correct = False
         else:
-            is_correct = user_ans.lower() == correct_answer.strip().lower()
+            if q_type == "mcq" and user_ans.upper() in ["A", "B", "C", "D"]:
+                mapping = {"A": 0, "B": 1, "C": 2, "D": 3}
+                idx = mapping[user_ans.upper()]
+                shown_options = q_data.get("options") or []
+                if idx < len(shown_options):
+                    user_ans_text = shown_options[idx]
+            
+            is_correct = user_ans_text.lower() == correct_answer.strip().lower()
 
         if is_correct:
             correct_count += 1
@@ -255,7 +264,7 @@ def evaluate_test(
             question_id=q_id,
             question_text=question_text,
             question_type=q_type,
-            user_answer=user_ans if user_ans else "(no answer)",
+            user_answer=user_ans_text if user_ans_text else "(no answer)",
             correct_answer=correct_answer,
             is_correct=is_correct,
         ))
