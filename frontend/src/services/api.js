@@ -7,7 +7,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  timeout: 600000, // 10 minutes — AI processing can take a while for large docs
 });
 
 // Request interceptor

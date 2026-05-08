@@ -38,7 +38,14 @@ def _get_openai_client():
             "OPENAI_API_KEY is not configured. "
             "Set a valid key in your .env file."
         )
-    return OpenAI(api_key=api_key)
+    return OpenAI(
+        api_key=api_key,
+        base_url="https://openrouter.ai/api/v1",
+        default_headers={
+            "HTTP-Referer": "http://localhost:5173",
+            "X-Title": "AI Question Generator",
+        },
+    )
 
 
 def _extract_json_from_response(raw: str) -> str:
@@ -257,7 +264,8 @@ def generate_questions_from_chunks(
     Generate questions from all chunks of a document.
 
     Iterates over each chunk sequentially, accumulates all validated questions,
-    and returns the combined list.
+    and returns the combined list. Caps at MAX_CHUNKS to avoid excessive
+    processing time on very large documents.
 
     Args:
         chunks: List of text chunks from the chunking step.
@@ -268,10 +276,18 @@ def generate_questions_from_chunks(
     Returns:
         Combined list of all validated question dicts.
     """
+    MAX_CHUNKS = 5  # Cap to avoid multi-minute timeouts on large docs
     all_questions: List[Dict[str, Any]] = []
 
-    for i, chunk in enumerate(chunks, start=1):
-        logger.info("Processing chunk %d / %d ...", i, len(chunks))
+    chunks_to_process = chunks[:MAX_CHUNKS]
+    if len(chunks) > MAX_CHUNKS:
+        logger.warning(
+            "Document has %d chunks but capping at %d to stay within time limits.",
+            len(chunks), MAX_CHUNKS,
+        )
+
+    for i, chunk in enumerate(chunks_to_process, start=1):
+        logger.info("Processing chunk %d / %d ...", i, len(chunks_to_process))
         chunk_questions = generate_questions_from_chunk(
             chunk,
             mcq_count=mcq_per_chunk,

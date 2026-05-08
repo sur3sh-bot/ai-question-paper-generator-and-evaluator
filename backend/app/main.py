@@ -2,14 +2,18 @@
 AI-Powered Question Paper Generator & Evaluator — FastAPI Application Entry Point.
 """
 
+from dotenv import load_dotenv
+load_dotenv()  # Load .env before any other imports that use os.getenv
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine
 from app import models
-from app.routes import questions, test, evaluation, results
+# Added 'upload' to the imported routes
+from app.routes import questions, test, evaluation, results, upload
 
-# Create all database tables
+# Create all database tables (SQLite creates the file if it doesn't exist)
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -21,7 +25,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS — allow all origins for development; tighten in production
+# CORS — allow all origins for development (React runs on 5173, FastAPI on 8000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,6 +39,8 @@ app.include_router(questions.router)
 app.include_router(test.router)
 app.include_router(evaluation.router)
 app.include_router(results.router)
+# CRITICAL: Register the upload router to enable AI document processing
+app.include_router(upload.router)
 
 
 @app.get("/", tags=["Health"])

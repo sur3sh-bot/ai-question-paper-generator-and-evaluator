@@ -7,6 +7,7 @@ import { questionsApi } from '../services/api';
 import QuestionCard from '../components/QuestionCard';
 import { PageLoader } from '../components/Spinner';
 import Toast from '../components/Toast';
+import AIQuestionGenerator from '../components/AIQuestionGenerator';
 
 const DIFFICULTIES = ['all', 'easy', 'medium', 'hard'];
 const TYPES = ['all', 'mcq', 'fill_blank'];
@@ -24,6 +25,7 @@ export default function QuestionManager() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showGenerator, setShowGenerator] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState('');
   const [filterDiff, setFilterDiff] = useState('all');
@@ -110,12 +112,38 @@ export default function QuestionManager() {
           <button onClick={fetchQuestions} className="btn-secondary !px-3" title="Refresh">
             <RiRefreshLine className={loading ? 'animate-spin' : ''} />
           </button>
-          <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+          <button 
+            onClick={() => {
+              setShowGenerator(!showGenerator);
+              if (showForm) setShowForm(false);
+            }} 
+            className="btn-secondary"
+          >
+            {showGenerator ? <RiCloseLine /> : <RiAddLine />}
+            {showGenerator ? 'Cancel' : 'Generate with AI'}
+          </button>
+          <button 
+            onClick={() => {
+              setShowForm(!showForm);
+              if (showGenerator) setShowGenerator(false);
+            }} 
+            className="btn-primary"
+          >
             {showForm ? <RiCloseLine /> : <RiAddLine />}
             {showForm ? 'Cancel' : 'Add Question'}
           </button>
         </div>
       </div>
+
+      {/* AI Question Generator */}
+      {showGenerator && (
+        <div className="animate-slide-up">
+          <AIQuestionGenerator onComplete={() => {
+            setShowGenerator(false);
+            fetchQuestions();
+          }} />
+        </div>
+      )}
 
       {/* Add Question Form */}
       {showForm && (
