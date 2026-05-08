@@ -40,6 +40,14 @@ class QuestionCreate(BaseModel):
         if self.type == "mcq":
             if not self.options or len(self.options) < 2:
                 raise ValueError("MCQ questions must have at least 2 options")
+            
+            ans = self.correct_answer.strip().upper()
+            mapping = {"A": 0, "B": 1, "C": 2, "D": 3}
+            if ans in mapping:
+                idx = mapping[ans]
+                if idx < len(self.options):
+                    self.correct_answer = self.options[idx]
+                    
             if self.correct_answer not in self.options:
                 raise ValueError("correct_answer must be one of the provided options")
         return self
@@ -146,6 +154,7 @@ class Analytics(BaseModel):
 
 class EvaluationResponse(BaseModel):
     """Full evaluation result returned to the client."""
+    id: str
     test_id: str
     score: int
     total: int
@@ -155,3 +164,7 @@ class EvaluationResponse(BaseModel):
     unanswered_count: int
     breakdown: List[AnswerDetail]
     analytics: Analytics
+    created_at: datetime
+    
+    model_config = {"from_attributes": True}
+

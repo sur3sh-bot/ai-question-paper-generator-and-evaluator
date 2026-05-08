@@ -277,7 +277,23 @@ def evaluate_test(
         unanswered=unanswered_count,
     )
 
+    result_record = models.TestResult(
+        test_id=test_id,
+        score=correct_count,
+        total=total,
+        accuracy_percent=int(accuracy),
+        correct_count=correct_count,
+        wrong_count=wrong_count,
+        unanswered_count=unanswered_count,
+        breakdown=[b.model_dump() for b in breakdown],
+        analytics=analytics.model_dump(),
+    )
+    db.add(result_record)
+    db.commit()
+    db.refresh(result_record)
+
     return schemas.EvaluationResponse(
+        id=result_record.id,
         test_id=test_id,
         score=correct_count,
         total=total,
@@ -287,4 +303,11 @@ def evaluate_test(
         unanswered_count=unanswered_count,
         breakdown=breakdown,
         analytics=analytics,
+        created_at=result_record.created_at,
     )
+
+def get_all_results(db: Session):
+    return db.query(models.TestResult).order_by(models.TestResult.created_at.desc()).all()
+
+def get_result_by_id(db: Session, result_id: str):
+    return db.query(models.TestResult).filter(models.TestResult.id == result_id).first()

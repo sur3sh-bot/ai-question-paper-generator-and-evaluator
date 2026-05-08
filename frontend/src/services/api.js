@@ -67,24 +67,31 @@ export const questionsApi = {
 
 export const testsApi = {
   generate: async (options) => {
-    // options: { num_questions, difficulty, question_types }
-    const response = await api.post('/tests/generate', options);
+    // backend expects { number_of_questions: int, difficulty: Optional[str] }
+    const payload = {
+      number_of_questions: options.num_questions,
+      difficulty: options.difficulty === 'mixed' ? null : options.difficulty,
+    };
+    const response = await api.post('/generate-test', payload);
     return response.data;
   },
 
   getById: async (id) => {
-    const response = await api.get(`/tests/${id}`);
+    const response = await api.get(`/generate-test/${id}`);
     return response.data;
   },
 
   getAll: async () => {
-    const response = await api.get('/tests');
+    const response = await api.get('/generate-test');
     return response.data;
   },
 
-  submit: async (id, answers) => {
-    // answers: { answers: { question_id: answer_value, ... } }
-    const response = await api.post(`/tests/${id}/submit`, { answers });
+  submit: async (id, answersDict) => {
+    const payload = {
+      test_id: id,
+      user_answers: Object.entries(answersDict).map(([k, v]) => ({ question_id: k, answer: v || '' }))
+    };
+    const response = await api.post(`/evaluate`, payload);
     return response.data;
   },
 };

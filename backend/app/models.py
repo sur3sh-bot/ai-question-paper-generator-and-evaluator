@@ -43,3 +43,22 @@ class GeneratedTest(Base):
     total_questions = Column(Integer, nullable=False)
     time_limit_seconds = Column(Integer, nullable=False, default=1800)  # 30 min default
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class TestResult(Base):
+    """
+    Stores the evaluation result of a submitted test.
+    """
+    __tablename__ = "test_results"
+
+    id = Column(String, primary_key=True, default=generate_uuid, index=True)
+    test_id = Column(String, index=True)
+    score = Column(Integer, nullable=False)
+    total = Column(Integer, nullable=False)
+    accuracy_percent = Column(Integer, nullable=False)
+    correct_count = Column(Integer, nullable=False)
+    wrong_count = Column(Integer, nullable=False)
+    unanswered_count = Column(Integer, nullable=False)
+    breakdown = Column(JSON, nullable=False)
+    analytics = Column(JSON, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
