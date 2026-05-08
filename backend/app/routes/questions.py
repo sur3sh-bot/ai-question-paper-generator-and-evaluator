@@ -21,7 +21,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app import crud, schemas
+from app import crud, schemas, models
 from app.database import get_db
 
 router = APIRouter(prefix="/questions", tags=["Questions"])
@@ -54,6 +54,27 @@ def list_questions(
         raise HTTPException(status_code=422, detail="type must be 'mcq' or 'fill_blank'")
 
     return crud.get_all_questions(db, difficulty=difficulty, q_type=type)
+
+
+@router.get("/stats")
+def get_stats(db: Session = Depends(get_db)):
+    """Return stats for the dashboard."""
+    total = db.query(models.Question).count()
+    mcq = db.query(models.Question).filter(models.Question.type == "mcq").count()
+    fill_blank = db.query(models.Question).filter(models.Question.type == "fill_blank").count()
+    
+    # Calculate avg score from TestResult table
+    results = db.query(models.TestResult).all()
+    avg_score = 0
+    if results:
+        avg_score = round(sum(r.accuracy_percent for r in results) / len(results))
+        
+    return {
+        "total": total,
+        "mcq": mcq,
+        "fill_blank": fill_blank,
+        "avg_score": avg_score
+    }
 
 
 @router.get("/{question_id}", response_model=schemas.QuestionResponse)

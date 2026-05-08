@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine
 from app import models
-from app.routes import questions, test, evaluation
+from app.routes import questions, test, evaluation, results
 
 # Create all database tables
 models.Base.metadata.create_all(bind=engine)
@@ -34,6 +34,7 @@ app.add_middleware(
 app.include_router(questions.router)
 app.include_router(test.router)
 app.include_router(evaluation.router)
+app.include_router(results.router)
 
 
 @app.get("/", tags=["Health"])

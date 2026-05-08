@@ -16,6 +16,7 @@ Example cURL requests:
   curl http://localhost:8000/generate-test/<test_id>
 """
 
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -55,6 +56,22 @@ def generate_test(payload: schemas.GenerateTestRequest, db: Session = Depends(ge
         created_at=test.created_at,
     )
 
+
+@router.get("", response_model=List[schemas.GeneratedTestResponse])
+def list_tests(db: Session = Depends(get_db)):
+    """Retrieve all generated tests."""
+    tests = db.query(models.GeneratedTest).order_by(models.GeneratedTest.created_at.desc()).all()
+    return [
+        schemas.GeneratedTestResponse(
+            test_id=test.id,
+            questions=[schemas.QuestionPublic(**q) for q in test.questions_snapshot],
+            total_questions=test.total_questions,
+            difficulty_filter=test.difficulty_filter,
+            time_limit_seconds=test.time_limit_seconds,
+            created_at=test.created_at,
+        )
+        for test in tests
+    ]
 
 @router.get("/{test_id}", response_model=schemas.GeneratedTestResponse)
 def get_test(test_id: str, db: Session = Depends(get_db)):
