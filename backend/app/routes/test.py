@@ -58,12 +58,6 @@ def generate_test(payload: schemas.GenerateTestRequest, db: Session = Depends(ge
     )
 
 
-@router.get("/subjects", response_model=List[str])
-def get_subjects(db: Session = Depends(get_db)):
-    """Return all unique subject tags in the question bank."""
-    rows = db.query(models.Question.subject).distinct().all()
-    return sorted([r[0] for r in rows if r[0]])
-
 
 @router.get("", response_model=List[schemas.GeneratedTestResponse])
 def list_tests(db: Session = Depends(get_db)):

@@ -100,7 +100,9 @@ export default function TestPage() {
       {/* Test Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-2xl font-bold text-ink-50">Test #{id}</h1>
+          <h1 className="font-display text-2xl font-bold text-ink-50">
+            {([...new Set(questions.map(q => q.subject).filter(Boolean))].length === 1 ? [...new Set(questions.map(q => q.subject).filter(Boolean))][0] : [...new Set(questions.map(q => q.subject).filter(Boolean))].length > 1 ? "Mixed Subjects" : "Test")} · {(id || '').slice(0, 8).toUpperCase()}
+          </h1>
           <p className="text-ink-500 text-sm font-body">
             {answeredCount}/{totalQ} answered
           </p>

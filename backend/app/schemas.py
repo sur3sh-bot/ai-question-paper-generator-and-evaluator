@@ -154,6 +154,7 @@ class Analytics(BaseModel):
     medium_total: int
     hard_total: int
     unanswered: int
+    test_subject: Optional[str] = None
 
 
 class EvaluationResponse(BaseModel):

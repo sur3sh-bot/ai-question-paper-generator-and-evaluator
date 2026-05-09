@@ -63,7 +63,7 @@ export const questionsApi = {
   },
 
   getSubjects: async () => {
-    const response = await api.get('/generate-test/subjects');
+    const response = await api.get('/questions/all-subjects');
     return response.data;
   },
 };

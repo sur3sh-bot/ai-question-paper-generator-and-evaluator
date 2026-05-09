@@ -78,6 +78,13 @@ def get_stats(db: Session = Depends(get_db)):
     }
 
 
+@router.get("/all-subjects", response_model=List[str])
+def get_subjects(db: Session = Depends(get_db)):
+    """Return all unique subject tags present in the question bank."""
+    rows = db.query(models.Question.subject).distinct().all()
+    return sorted([r[0] for r in rows if r[0]])
+
+
 @router.get("/{question_id}", response_model=schemas.QuestionResponse)
 def get_question(question_id: str, db: Session = Depends(get_db)):
     """

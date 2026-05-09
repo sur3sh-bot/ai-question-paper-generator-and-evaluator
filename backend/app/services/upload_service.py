@@ -10,7 +10,7 @@ import os
 import uuid
 import logging
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from sqlalchemy.orm import Session
 from fastapi import UploadFile, HTTPException

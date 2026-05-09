@@ -150,6 +150,7 @@ def generate_test(
             "type": q.type,
             "options": options,
             "difficulty": q.difficulty,
+            "subject": q.subject,
         })
 
     # Compute time limit: 2 min per question, min 10 min, max 3 hours
@@ -279,6 +280,9 @@ def evaluate_test(
     total = len(answer_key)
     accuracy = round((correct_count / total) * 100, 2) if total > 0 else 0.0
 
+    subjects = {q.get("subject", "General") for q in test.questions_snapshot if q.get("subject")}
+    test_subject = list(subjects)[0] if len(subjects) == 1 else "Mixed Subjects" if len(subjects) > 1 else "General"
+
     analytics = schemas.Analytics(
         total_mcq=total_mcq,
         total_fill_blank=total_fill,
@@ -291,6 +295,7 @@ def evaluate_test(
         medium_total=diff_totals.get("medium", 0),
         hard_total=diff_totals.get("hard", 0),
         unanswered=unanswered_count,
+        test_subject=test_subject,
     )
 
     result_record = models.TestResult(

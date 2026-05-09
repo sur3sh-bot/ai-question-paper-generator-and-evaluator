@@ -72,6 +72,7 @@ export default function GenerateTest() {
         difficulty: form.difficulty,
         question_types: form.question_types,
         time_limit: Number(form.time_limit),
+        subject: form.subject || null,
       };
       const data = await testsApi.generate(payload);
       const testId = data.id || data.test_id;
