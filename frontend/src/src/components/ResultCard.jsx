@@ -1,4 +1,5 @@
 import { RiCheckLine, RiCloseLine, RiTrophyLine, RiTimeLine, RiBarChartLine } from 'react-icons/ri';
+import { getResultAccuracy, getResultCorrect, getResultSubject, getResultWrong } from '../utils/results';
 
 const scoreColor = (pct) => {
   if (pct >= 80) return 'text-volt-400';
@@ -24,13 +25,13 @@ export default function ResultCard({ result }) {
     correct = 0,
     wrong = 0,
     weak_areas = [],
-    test_id,
     created_at,
   } = result;
 
-  const pct = accuracy || (total > 0 ? Math.round((score / total) * 100) : 0);
-  const correctCount = correct || score;
-  const wrongCount = wrong || (total - score);
+  const pct = getResultAccuracy(result) || accuracy || (total > 0 ? Math.round((score / total) * 100) : 0);
+  const correctCount = getResultCorrect(result) || correct || score;
+  const wrongCount = getResultWrong(result) || wrong || (total - score);
+  const subject = getResultSubject(result);
 
   const circumference = 2 * Math.PI * 36;
   const offset = circumference * (1 - pct / 100);
@@ -41,12 +42,11 @@ export default function ResultCard({ result }) {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-display font-bold text-lg text-ink-50">
-            {scoreLabel(pct)}
+            {subject}
           </h3>
-          {(test_id || created_at) && (
+          {created_at && (
             <p className="text-xs text-ink-500 mt-0.5 font-body">
-              {test_id && `Test #${test_id}`}
-              {created_at && ` · ${new Date(created_at).toLocaleDateString()}`}
+              {scoreLabel(pct)} - {new Date(created_at).toLocaleDateString()}
             </p>
           )}
         </div>
@@ -135,3 +135,4 @@ export default function ResultCard({ result }) {
     </div>
   );
 }
+

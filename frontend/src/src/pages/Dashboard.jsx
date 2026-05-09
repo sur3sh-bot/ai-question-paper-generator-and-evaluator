@@ -13,6 +13,7 @@ import {
 } from 'react-icons/ri';
 import { questionsApi, resultsApi, testsApi } from '../services/api';
 import { PageLoader } from '../components/Spinner';
+import { getResultAccuracy, getResultCorrect, getResultSubject } from '../utils/results';
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -198,8 +199,10 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-3">
               {recentResults.map((result, i) => {
-                const pct = result.accuracy ||
-                  (result.total > 0 ? Math.round(((result.score || result.correct || 0) / result.total) * 100) : 0);
+                const correct = getResultCorrect(result);
+                const pct = getResultAccuracy(result) ||
+                  (result.total > 0 ? Math.round((correct / result.total) * 100) : 0);
+                const subject = getResultSubject(result);
                 return (
                   <div key={result.id || i} className="glass-card-hover p-4 flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0
@@ -213,10 +216,10 @@ export default function Dashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-display font-600 text-sm text-ink-100">
-                        Test #{result.test_id || result.id}
+                        {subject}
                       </p>
                       <p className="text-xs text-ink-500 font-body">
-                        {result.score || result.correct}/{result.total} correct
+                        {correct}/{result.total} correct
                         {result.created_at && ` · ${new Date(result.created_at).toLocaleDateString()}`}
                       </p>
                     </div>
