@@ -26,6 +26,7 @@ class Question(Base):
     options = Column(JSON, nullable=True)           # List of strings for MCQ; null for fill_blank
     correct_answer = Column(String, nullable=False)
     difficulty = Column(Enum("easy", "medium", "hard", name="difficulty_level"), nullable=False)
+    subject = Column(String, nullable=True, default="General")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, Depends, Query, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, Query, Form, HTTPException
 from sqlalchemy.orm import Session
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from app.database import get_db
 from app.services.upload_service import process_upload
@@ -12,6 +12,7 @@ async def upload_material(
     file: UploadFile = File(...),
     mcq_count: int = Query(3, alias="mcq_per_chunk", ge=1, le=10),
     fill_count: int = Query(2, alias="fill_per_chunk", ge=0, le=10),
+    subject: Optional[str] = Form("General", description="Subject for the uploaded material"),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
@@ -25,11 +26,12 @@ async def upload_material(
     """
     try:
         # This calls the orchestrator you just finished
-        result = process_upload(
+        result = await process_upload(
             upload=file,
             db=db,
             mcq_per_chunk=mcq_count,
-            fill_per_chunk=fill_count
+            fill_per_chunk=fill_count,
+            subject=subject
         )
         return result
         

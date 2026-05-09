@@ -17,6 +17,7 @@ class QuestionCreate(BaseModel):
     options: Optional[List[str]] = None
     correct_answer: str
     difficulty: str  # "easy", "medium", "hard"
+    subject: Optional[str] = "General"
 
     @field_validator("type")
     @classmethod
@@ -61,6 +62,7 @@ class QuestionResponse(BaseModel):
     options: Optional[List[str]] = None
     correct_answer: str
     difficulty: str
+    subject: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -73,6 +75,7 @@ class QuestionPublic(BaseModel):
     type: str
     options: Optional[List[str]] = None
     difficulty: str
+    subject: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -83,6 +86,7 @@ class GenerateTestRequest(BaseModel):
     """Request body for generating a test."""
     number_of_questions: int
     difficulty: Optional[str] = None  # If None, mix all difficulties
+    subject: Optional[str] = None     # If None, pull from all subjects
 
     @field_validator("number_of_questions")
     @classmethod

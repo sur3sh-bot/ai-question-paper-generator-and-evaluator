@@ -10,6 +10,7 @@ export default function AIQuestionGenerator({ onComplete }) {
   const [status, setStatus] = useState('idle'); // idle | processing | done
   const [currentStep, setCurrentStep] = useState(0);
   const [questions, setQuestions] = useState([]);
+  const [subject, setSubject] = useState('');
   const [toast, setToast] = useState(null);
 
   // Edit state
@@ -32,6 +33,10 @@ export default function AIQuestionGenerator({ onComplete }) {
       showToast('File must be under 20 MB', 'error');
       return;
     }
+    if (!subject.trim()) {
+      showToast('Please enter a subject name before uploading', 'error');
+      return;
+    }
 
     setStatus('processing');
     setCurrentStep(0);
@@ -43,6 +48,7 @@ export default function AIQuestionGenerator({ onComplete }) {
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('subject', subject.trim());
 
     try {
       const { data } = await api.post('/upload/material', formData, {
@@ -120,23 +126,46 @@ export default function AIQuestionGenerator({ onComplete }) {
 
       {/* ── IDLE: file picker ─────────────────────────────────────────────── */}
       {status === 'idle' && (
-        <label className="glass-card-hover flex flex-col items-center justify-center py-16 cursor-pointer group animate-fade-in">
-          <input
-            type="file"
-            className="hidden"
-            accept=".pdf,.docx,.pptx,.txt"
-            onChange={handleFileSelect}
-          />
-          <div className="w-16 h-16 rounded-2xl bg-volt-500/10 border border-volt-500/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300">
-            <RiUploadCloud2Line className="text-volt-400 text-3xl" />
+        <div className="space-y-4 animate-fade-in">
+          {/* Subject input */}
+          <div className="glass-card p-5">
+            <label className="label-text flex items-center gap-1.5 mb-2">
+              Subject Name
+              <span className="text-ember-400">*</span>
+            </label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder="e.g. DBMS, Biology, Computer Networks"
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+            />
+            <p className="text-[11px] text-ink-600 font-body mt-1.5">
+              All questions from this upload will be tagged with this subject.
+            </p>
           </div>
-          <p className="font-display font-bold text-lg text-ink-100 mb-1">
-            Upload Study Material
-          </p>
-          <p className="text-ink-500 text-sm font-body">
-            Click to browse or drag & drop &nbsp;·&nbsp; .pdf, .docx, .pptx, .txt &nbsp;·&nbsp; max 20 MB
-          </p>
-        </label>
+
+          {/* File drop zone */}
+          <label className={`glass-card-hover flex flex-col items-center justify-center py-12 cursor-pointer group
+            ${!subject.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <input
+              type="file"
+              className="hidden"
+              accept=".pdf,.docx,.pptx,.txt"
+              onChange={handleFileSelect}
+              disabled={!subject.trim()}
+            />
+            <div className="w-16 h-16 rounded-2xl bg-volt-500/10 border border-volt-500/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300">
+              <RiUploadCloud2Line className="text-volt-400 text-3xl" />
+            </div>
+            <p className="font-display font-bold text-lg text-ink-100 mb-1">
+              {subject.trim() ? `Upload ${subject} Material` : 'Enter a subject name first'}
+            </p>
+            <p className="text-ink-500 text-sm font-body">
+              Click to browse or drag &amp; drop &nbsp;·&nbsp; .pdf, .docx, .pptx, .txt &nbsp;·&nbsp; max 20 MB
+            </p>
+          </label>
+        </div>
       )}
 
       {/* ── PROCESSING: step progress ─────────────────────────────────────── */}

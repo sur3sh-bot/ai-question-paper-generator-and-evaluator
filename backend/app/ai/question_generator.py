@@ -9,6 +9,7 @@ import os
 import json
 import re
 import logging
+import asyncio
 from typing import List, Dict, Any, Optional
 
 from app.ai.prompts import build_mcq_prompt, build_fill_blank_prompt, SYSTEM_PROMPT
@@ -20,15 +21,21 @@ VALID_TYPES = {"mcq", "fill_blank"}
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 
 
+_client = None
+
 def _get_openai_client():
     """
-    Lazily initialise and return an OpenAI client.
+    Lazily initialise and return a global OpenAI client instance.
 
     Raises:
         RuntimeError: If OPENAI_API_KEY is not set or openai is not installed.
     """
+    global _client
+    if _client is not None:
+        return _client
+
     try:
-        from openai import OpenAI
+        from openai import AsyncOpenAI
     except ImportError:
         raise RuntimeError("openai package is not installed. Run: pip install openai")
 
@@ -38,14 +45,17 @@ def _get_openai_client():
             "OPENAI_API_KEY is not configured. "
             "Set a valid key in your .env file."
         )
-    return OpenAI(
+    _client = AsyncOpenAI(
         api_key=api_key,
         base_url="https://openrouter.ai/api/v1",
         default_headers={
             "HTTP-Referer": "http://localhost:5173",
             "X-Title": "AI Question Generator",
         },
+        timeout=60.0,
+        max_retries=0,
     )
+    return _client
 
 
 def _extract_json_from_response(raw: str) -> str:
@@ -151,13 +161,14 @@ def _validate_and_normalise_question(raw_q: Dict[str, Any]) -> Optional[Dict[str
     }
 
 
-def _call_openai(prompt: str, model: str, temperature: float = 0.7) -> str:
+async def _call_openai(prompt: str, model: str, semaphore: asyncio.Semaphore, temperature: float = 0.7) -> str:
     """
     Make a single call to the OpenAI Chat Completions API.
 
     Args:
         prompt: The user message (rendered prompt).
         model: OpenAI model identifier (e.g., 'gpt-4o-mini').
+        semaphore: Asyncio semaphore for concurrency control.
         temperature: Sampling temperature.
 
     Returns:
@@ -167,105 +178,110 @@ def _call_openai(prompt: str, model: str, temperature: float = 0.7) -> str:
         RuntimeError: On API error or empty response.
     """
     client = _get_openai_client()
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=temperature,
-            max_tokens=2048,
-        )
-        content = response.choices[0].message.content
-        if not content:
-            raise RuntimeError("OpenAI returned an empty response.")
-        return content
-    except Exception as exc:
-        # Re-raise with a cleaner message; caller handles HTTP response
-        raise RuntimeError(f"OpenAI API call failed: {exc}") from exc
+    async with semaphore:
+        try:
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=temperature,
+                max_tokens=2048,
+            )
+            content = response.choices[0].message.content
+            if not content:
+                raise RuntimeError("OpenAI returned an empty response.")
+            return content
+        except Exception as exc:
+            # Re-raise with a cleaner message; caller handles HTTP response
+            raise RuntimeError(f"OpenAI API call failed: {exc}") from exc
 
 
-def generate_questions_from_chunk(
+async def generate_questions_from_chunk(
     chunk: str,
+    semaphore: asyncio.Semaphore,
     mcq_count: int = 3,
     fill_count: int = 2,
     model: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
-    Generate MCQ + fill-in-the-blank questions from a single text chunk.
-
-    Sends two separate prompts (one for MCQ, one for fill-blank) and merges
-    the validated results. Malformed responses are handled gracefully.
+    Generate MCQ + fill-in-the-blank questions from a single text chunk concurrently.
 
     Args:
         chunk: A single text chunk (1500–2500 chars) of study material.
+        semaphore: Concurrency limiter.
         mcq_count: Number of MCQ questions to request from the AI.
         fill_count: Number of fill-in-the-blank questions to request.
-        model: OpenAI model to use (reads OPENAI_MODEL env var if None).
+        model: OpenAI model to use.
 
     Returns:
         List of validated question dicts ready for DB insertion.
-        May contain fewer than mcq_count + fill_count entries if some were invalid.
     """
     model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     all_questions: List[Dict[str, Any]] = []
 
-    # ── MCQ generation ────────────────────────────────────────────────────────
-    try:
-        mcq_prompt = build_mcq_prompt(content=chunk, count=mcq_count)
-        mcq_raw = _call_openai(mcq_prompt, model=model)
-        mcq_json_str = _extract_json_from_response(mcq_raw)
-        mcq_list = json.loads(mcq_json_str)
-        if not isinstance(mcq_list, list):
-            raise ValueError("MCQ response is not a JSON array")
-        for raw_q in mcq_list:
-            validated = _validate_and_normalise_question(raw_q)
-            if validated:
-                all_questions.append(validated)
-        logger.info("MCQ: parsed %d valid questions from chunk.", len(all_questions))
-    except json.JSONDecodeError as exc:
-        logger.error("MCQ JSON parse error: %s", exc)
-    except Exception as exc:
-        logger.error("MCQ generation failed: %s", exc)
+    mcq_prompt = build_mcq_prompt(content=chunk, count=mcq_count)
+    fill_prompt = build_fill_blank_prompt(content=chunk, count=fill_count)
 
-    # ── Fill-in-the-blank generation ──────────────────────────────────────────
+    # Fire both requests simultaneously
+    mcq_task = asyncio.create_task(_call_openai(mcq_prompt, model=model, semaphore=semaphore))
+    fill_task = asyncio.create_task(_call_openai(fill_prompt, model=model, semaphore=semaphore))
+    
+    mcq_result, fill_result = await asyncio.gather(mcq_task, fill_task, return_exceptions=True)
+
+    # ── MCQ parsing ────────────────────────────────────────────────────────
+    if isinstance(mcq_result, Exception):
+        logger.error("MCQ generation failed: %s", mcq_result)
+    else:
+        try:
+            mcq_json_str = _extract_json_from_response(mcq_result)
+            mcq_list = json.loads(mcq_json_str)
+            if not isinstance(mcq_list, list):
+                raise ValueError("MCQ response is not a JSON array")
+            for raw_q in mcq_list:
+                validated = _validate_and_normalise_question(raw_q)
+                if validated:
+                    all_questions.append(validated)
+            logger.info("MCQ: parsed %d valid questions from chunk.", len(all_questions))
+        except Exception as exc:
+            logger.error("MCQ JSON parse error: %s", exc)
+
+    # ── Fill-in-the-blank parsing ──────────────────────────────────────────
     fill_start = len(all_questions)
-    try:
-        fill_prompt = build_fill_blank_prompt(content=chunk, count=fill_count)
-        fill_raw = _call_openai(fill_prompt, model=model)
-        fill_json_str = _extract_json_from_response(fill_raw)
-        fill_list = json.loads(fill_json_str)
-        if not isinstance(fill_list, list):
-            raise ValueError("Fill-blank response is not a JSON array")
-        for raw_q in fill_list:
-            validated = _validate_and_normalise_question(raw_q)
-            if validated:
-                all_questions.append(validated)
-        logger.info(
-            "Fill-blank: parsed %d valid questions from chunk.",
-            len(all_questions) - fill_start,
-        )
-    except json.JSONDecodeError as exc:
-        logger.error("Fill-blank JSON parse error: %s", exc)
-    except Exception as exc:
-        logger.error("Fill-blank generation failed: %s", exc)
+    if isinstance(fill_result, Exception):
+        logger.error("Fill-blank generation failed: %s", fill_result)
+    else:
+        try:
+            fill_json_str = _extract_json_from_response(fill_result)
+            fill_list = json.loads(fill_json_str)
+            if not isinstance(fill_list, list):
+                raise ValueError("Fill-blank response is not a JSON array")
+            for raw_q in fill_list:
+                validated = _validate_and_normalise_question(raw_q)
+                if validated:
+                    all_questions.append(validated)
+            logger.info(
+                "Fill-blank: parsed %d valid questions from chunk.",
+                len(all_questions) - fill_start,
+            )
+        except Exception as exc:
+            logger.error("Fill-blank JSON parse error: %s", exc)
 
     return all_questions
 
 
-def generate_questions_from_chunks(
+async def generate_questions_from_chunks(
     chunks: List[str],
     mcq_per_chunk: int = 3,
     fill_per_chunk: int = 2,
     model: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
-    Generate questions from all chunks of a document.
+    Generate questions from all chunks of a document concurrently.
 
-    Iterates over each chunk sequentially, accumulates all validated questions,
-    and returns the combined list. Caps at MAX_CHUNKS to avoid excessive
-    processing time on very large documents.
+    Uses asyncio.gather to process chunks in parallel, capped by an
+    asyncio.Semaphore to limit concurrent requests to the API.
 
     Args:
         chunks: List of text chunks from the chunking step.
@@ -286,14 +302,23 @@ def generate_questions_from_chunks(
             len(chunks), MAX_CHUNKS,
         )
 
+    semaphore = asyncio.Semaphore(5)
+    tasks = []
+
     for i, chunk in enumerate(chunks_to_process, start=1):
-        logger.info("Processing chunk %d / %d ...", i, len(chunks_to_process))
-        chunk_questions = generate_questions_from_chunk(
+        logger.info("Preparing task for chunk %d / %d ...", i, len(chunks_to_process))
+        task = generate_questions_from_chunk(
             chunk,
+            semaphore=semaphore,
             mcq_count=mcq_per_chunk,
             fill_count=fill_per_chunk,
             model=model,
         )
+        tasks.append(task)
+
+    results = await asyncio.gather(*tasks)
+
+    for i, chunk_questions in enumerate(results, start=1):
         all_questions.extend(chunk_questions)
         logger.info(
             "Chunk %d yielded %d questions. Running total: %d.",

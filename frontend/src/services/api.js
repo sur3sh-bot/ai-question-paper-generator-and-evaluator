@@ -61,16 +61,21 @@ export const questionsApi = {
     const response = await api.get('/questions/stats');
     return response.data;
   },
+
+  getSubjects: async () => {
+    const response = await api.get('/generate-test/subjects');
+    return response.data;
+  },
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 export const testsApi = {
   generate: async (options) => {
-    // backend expects { number_of_questions: int, difficulty: Optional[str] }
     const payload = {
       number_of_questions: options.num_questions,
       difficulty: options.difficulty === 'mixed' ? null : options.difficulty,
+      subject: options.subject || null,
     };
     const response = await api.post('/generate-test', payload);
     return response.data;

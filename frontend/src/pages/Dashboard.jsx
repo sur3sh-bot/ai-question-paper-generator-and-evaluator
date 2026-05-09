@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Collapse, Tag } from 'antd';
 import {
   RiQuestionLine,
   RiFileList3Line,
@@ -17,14 +18,16 @@ import { PageLoader } from '../components/Spinner';
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [recentResults, setRecentResults] = useState([]);
+  const [questionsBySubject, setQuestionsBySubject] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [statsData, resultsData] = await Promise.allSettled([
+        const [statsData, resultsData, questionsData] = await Promise.allSettled([
           questionsApi.getStats(),
           resultsApi.getAll(),
+          questionsApi.getAll(),
         ]);
 
         if (statsData.status === 'fulfilled') {
@@ -36,6 +39,17 @@ export default function Dashboard() {
 
         if (resultsData.status === 'fulfilled') {
           setRecentResults((resultsData.value || []).slice(0, 3));
+        }
+
+        if (questionsData.status === 'fulfilled') {
+          const qs = Array.isArray(questionsData.value) ? questionsData.value : (questionsData.value.questions || []);
+          const grouped = {};
+          qs.forEach(q => {
+            const subj = q.subject || 'General';
+            if (!grouped[subj]) grouped[subj] = [];
+            grouped[subj].push(q);
+          });
+          setQuestionsBySubject(grouped);
         }
       } finally {
         setLoading(false);
@@ -230,8 +244,56 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Subject-Based Question Bank Partition */}
+      <div className="mt-10">
+        <h2 className="font-display font-600 text-lg text-ink-100 mb-4 flex items-center gap-2">
+          <RiFileList3Line className="text-volt-500" />
+          Question Bank by Subject
+        </h2>
+        {Object.keys(questionsBySubject).length === 0 ? (
+          <div className="glass-card p-8 text-center text-ink-500 font-body">
+            No questions available yet. Upload material to get started.
+          </div>
+        ) : (
+          <Collapse 
+            className="bg-ink-900 border border-ink-800 rounded-xl overflow-hidden shadow-sm"
+            expandIconPosition="end"
+            items={Object.keys(questionsBySubject).map((subj, idx) => ({
+              key: String(idx),
+              label: (
+                <div className="flex justify-between items-center pr-4 py-1">
+                  <span className="font-display font-bold text-ink-50 text-base">{subj}</span>
+                  <Tag color="blue" className="rounded-full px-3 !m-0 border-none bg-blue-500/20 text-blue-300">
+                    {questionsBySubject[subj].length} Questions
+                  </Tag>
+                </div>
+              ),
+              children: (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {questionsBySubject[subj].map(q => (
+                    <div key={q.id} className="p-4 rounded-lg border border-ink-800 bg-ink-950/50 hover:border-ink-700 transition-colors">
+                      <p className="text-sm font-medium text-ink-100 line-clamp-2 leading-relaxed" title={q.question}>
+                        {q.question}
+                      </p>
+                      <div className="flex gap-2 mt-3">
+                        <Tag color={q.type === 'mcq' ? 'cyan' : 'orange'} className="!m-0 text-[10px] uppercase border-none">
+                          {q.type === 'mcq' ? 'MCQ' : 'Fill Blank'}
+                        </Tag>
+                        <Tag color={q.difficulty === 'easy' ? 'success' : q.difficulty === 'medium' ? 'warning' : 'error'} className="!m-0 text-[10px] uppercase border-none">
+                          {q.difficulty}
+                        </Tag>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            }))}
+          />
+        )}
+      </div>
+
       {/* Backend Connection Notice */}
-      <div className="glass-card p-4 flex items-start gap-3">
+      <div className="glass-card p-4 flex items-start gap-3 mt-8">
         <div className="w-2 h-2 rounded-full bg-volt-500 mt-1.5 flex-shrink-0 animate-pulse" />
         <div>
           <p className="text-xs font-semibold text-ink-300 font-display">Backend API Status</p>

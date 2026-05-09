@@ -118,6 +118,7 @@ def _cleanup(file_path: Path) -> None:
 def _save_questions_to_db(
     questions: List[Dict[str, Any]],
     db: Session,
+    subject: Optional[str] = "General",
 ) -> List[schemas.QuestionResponse]:
     """
     Persist generated question dicts into the database using existing CRUD logic.
@@ -140,6 +141,7 @@ def _save_questions_to_db(
                 options=q.get("options"),
                 correct_answer=q["correct_answer"],
                 difficulty=q["difficulty"],
+                subject=subject,
             )
             db_question = crud.create_question(db, payload)
             saved.append(schemas.QuestionResponse.model_validate(db_question))
@@ -148,11 +150,12 @@ def _save_questions_to_db(
     return saved
 
 
-def process_upload(
+async def process_upload(
     upload: UploadFile,
     db: Session,
     mcq_per_chunk: int = MCQ_PER_CHUNK,
     fill_per_chunk: int = FILL_PER_CHUNK,
+    subject: Optional[str] = "General",
 ) -> Dict[str, Any]:
     """
     Full pipeline: file upload → text extraction → cleaning → chunking
@@ -163,6 +166,7 @@ def process_upload(
         db: Injected SQLAlchemy session.
         mcq_per_chunk: MCQ questions to generate per chunk.
         fill_per_chunk: Fill-blank questions per chunk.
+        subject: Optional subject tag for all generated questions.
 
     Returns:
         Dict with status, questions_generated count, chunks_processed,
@@ -210,7 +214,7 @@ def process_upload(
 
         # ── 5. Generate AI questions ──────────────────────────────────────────
         try:
-            generated = generate_questions_from_chunks(
+            generated = await generate_questions_from_chunks(
                 chunks,
                 mcq_per_chunk=mcq_per_chunk,
                 fill_per_chunk=fill_per_chunk,
@@ -225,7 +229,7 @@ def process_upload(
             )
 
         # ── 6. Save to database ───────────────────────────────────────────────
-        saved_questions = _save_questions_to_db(generated, db)
+        saved_questions = _save_questions_to_db(generated, db, subject=subject)
 
         logger.info(
             "Saved %d questions from '%s' to DB.", len(saved_questions), filename

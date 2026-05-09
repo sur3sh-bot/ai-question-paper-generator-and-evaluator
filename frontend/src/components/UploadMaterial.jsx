@@ -11,6 +11,7 @@ const UploadMaterial = ({ onComplete }) => {
   const [status, setStatus] = useState('idle'); // idle, uploading, processing, done
   const [currentStep, setCurrentStep] = useState(0);
   const [questions, setQuestions] = useState([]);
+  const [subject, setSubject] = useState('');
   
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -22,7 +23,11 @@ const UploadMaterial = ({ onComplete }) => {
 
     const formData = new FormData();
     formData.append('file', file);
-    // You can also append mcq_per_chunk and fill_per_chunk if needed
+    if (subject.trim()) {
+      formData.append('subject', subject.trim());
+    } else {
+      formData.append('subject', 'General');
+    }
 
     try {
       // Simulate upload progress
@@ -155,6 +160,12 @@ const UploadMaterial = ({ onComplete }) => {
       render: (text) => <span className="text-gray-600 bg-gray-100 px-2 py-1 rounded">{text}</span>,
     },
     {
+      title: 'Subject',
+      dataIndex: 'subject',
+      key: 'subject',
+      render: (subject) => <Tag color="purple" className="uppercase font-semibold tracking-wider text-xs">{subject || 'General'}</Tag>,
+    },
+    {
       title: 'Action',
       key: 'action',
       render: (_, record) => (
@@ -190,6 +201,17 @@ const UploadMaterial = ({ onComplete }) => {
           <div className="text-center mb-8">
             <Title level={2} className="!font-bold !text-gray-800 !mb-2">Upload Study Material</Title>
             <Text className="text-gray-500 text-lg">Let our AI generate high-quality questions for you instantly.</Text>
+          </div>
+
+          <div className="max-w-md mx-auto mb-8">
+            <label className="block text-sm font-medium text-gray-700 mb-2 font-display">Subject Name (Optional)</label>
+            <Input 
+              placeholder="e.g. DBMS, Biology, Physics" 
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="rounded-lg py-2"
+              size="large"
+            />
           </div>
           
           <Dragger

@@ -29,6 +29,7 @@ def create_question(db: Session, payload: schemas.QuestionCreate) -> models.Ques
         options=payload.options,
         correct_answer=payload.correct_answer,
         difficulty=payload.difficulty,
+        subject=payload.subject,
     )
     db.add(question)
     db.commit()
@@ -40,6 +41,7 @@ def get_all_questions(
     db: Session,
     difficulty: Optional[str] = None,
     q_type: Optional[str] = None,
+    subject: Optional[str] = None,
 ) -> List[models.Question]:
     """
     Retrieve all questions, with optional filters.
@@ -48,6 +50,7 @@ def get_all_questions(
         db: SQLAlchemy session.
         difficulty: Optional difficulty filter ('easy', 'medium', 'hard').
         q_type: Optional type filter ('mcq', 'fill_blank').
+        subject: Optional subject filter.
 
     Returns:
         List of Question ORM objects.
@@ -57,6 +60,8 @@ def get_all_questions(
         query = query.filter(models.Question.difficulty == difficulty)
     if q_type:
         query = query.filter(models.Question.type == q_type)
+    if subject:
+        query = query.filter(models.Question.subject == subject)
     return query.all()
 
 
@@ -99,6 +104,7 @@ def generate_test(
     db: Session,
     number_of_questions: int,
     difficulty: Optional[str] = None,
+    subject: Optional[str] = None,
 ) -> models.GeneratedTest:
     """
     Randomly select questions and create a new GeneratedTest record.
@@ -115,13 +121,14 @@ def generate_test(
     Returns:
         The persisted GeneratedTest ORM object.
     """
-    pool = get_all_questions(db, difficulty=difficulty)
+    pool = get_all_questions(db, difficulty=difficulty, subject=subject)
 
     if len(pool) < number_of_questions:
         raise ValueError(
             f"Not enough questions in the bank. "
             f"Requested {number_of_questions}, available {len(pool)}"
             + (f" with difficulty='{difficulty}'" if difficulty else "")
+            + (f" for subject='{subject}'" if subject else "")
         )
 
     selected: List[models.Question] = random.sample(pool, number_of_questions)

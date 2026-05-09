@@ -42,6 +42,7 @@ def add_question(payload: schemas.QuestionCreate, db: Session = Depends(get_db))
 def list_questions(
     difficulty: Optional[str] = Query(None, description="Filter by difficulty: easy, medium, hard"),
     type: Optional[str] = Query(None, description="Filter by type: mcq, fill_blank"),
+    subject: Optional[str] = Query(None, description="Filter by subject"),
     db: Session = Depends(get_db),
 ):
     """
@@ -53,7 +54,7 @@ def list_questions(
     if type and type not in ("mcq", "fill_blank"):
         raise HTTPException(status_code=422, detail="type must be 'mcq' or 'fill_blank'")
 
-    return crud.get_all_questions(db, difficulty=difficulty, q_type=type)
+    return crud.get_all_questions(db, difficulty=difficulty, q_type=type, subject=subject)
 
 
 @router.get("/stats")
