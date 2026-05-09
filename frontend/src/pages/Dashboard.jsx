@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+
 import {
   RiQuestionLine,
   RiFileList3Line,
@@ -17,14 +18,16 @@ import { PageLoader } from '../components/Spinner';
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [recentResults, setRecentResults] = useState([]);
+  const [questionsBySubject, setQuestionsBySubject] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [statsData, resultsData] = await Promise.allSettled([
+        const [statsData, resultsData, questionsData] = await Promise.allSettled([
           questionsApi.getStats(),
           resultsApi.getAll(),
+          questionsApi.getAll(),
         ]);
 
         if (statsData.status === 'fulfilled') {
@@ -36,6 +39,17 @@ export default function Dashboard() {
 
         if (resultsData.status === 'fulfilled') {
           setRecentResults((resultsData.value || []).slice(0, 3));
+        }
+
+        if (questionsData.status === 'fulfilled') {
+          const qs = Array.isArray(questionsData.value) ? questionsData.value : (questionsData.value.questions || []);
+          const grouped = {};
+          qs.forEach(q => {
+            const subj = q.subject || 'General';
+            if (!grouped[subj]) grouped[subj] = [];
+            grouped[subj].push(q);
+          });
+          setQuestionsBySubject(grouped);
         }
       } finally {
         setLoading(false);
@@ -213,7 +227,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-display font-600 text-sm text-ink-100">
-                        Test #{result.test_id || result.id}
+                        {result.analytics?.test_subject || 'Test'} · {(result.test_id || result.id || '').slice(0, 8).toUpperCase()}
                       </p>
                       <p className="text-xs text-ink-500 font-body">
                         {result.score || result.correct}/{result.total} correct
@@ -230,8 +244,58 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Subject-Based Question Bank Partition */}
+      <div className="mt-10">
+        <h2 className="font-display font-600 text-lg text-ink-100 mb-4 flex items-center gap-2">
+          <RiFileList3Line className="text-volt-500" />
+          Question Bank by Subject
+        </h2>
+        {Object.keys(questionsBySubject).length === 0 ? (
+          <div className="glass-card p-8 text-center text-ink-500 font-body">
+            No questions available yet. Upload material to get started.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {Object.keys(questionsBySubject).map((subj) => (
+              <details key={subj} className="group glass-card overflow-hidden [&_summary::-webkit-details-marker]:hidden">
+                <summary className="flex justify-between items-center p-4 cursor-pointer select-none transition-colors hover:bg-ink-800/40 border-b border-transparent group-open:border-ink-700/50 group-open:bg-ink-800/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-ink-800 border border-ink-700 flex items-center justify-center">
+                      <RiArrowRightLine className="text-ink-400 group-open:rotate-90 transition-transform duration-200" />
+                    </div>
+                    <span className="font-display font-bold text-ink-50 text-base">{subj}</span>
+                  </div>
+                  <span className="rounded-full px-3 py-1 text-xs font-display font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    {questionsBySubject[subj].length} Questions
+                  </span>
+                </summary>
+                <div className="p-5 bg-ink-900/30">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {questionsBySubject[subj].map(q => (
+                      <div key={q.id} className="p-4 flex flex-col rounded-xl border border-ink-700/50 bg-ink-800/40 hover:bg-ink-800/80 hover:border-ink-600 transition-all duration-200 group/card">
+                        <p className="text-sm font-body text-ink-100 line-clamp-3 leading-relaxed mb-4 group-hover/card:text-white" title={q.question}>
+                          {q.question}
+                        </p>
+                        <div className="flex gap-2 mt-auto">
+                          <span className={`px-2 py-1 rounded-md text-[10px] font-display font-bold uppercase tracking-wider border ${q.type === 'mcq' ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                            {q.type === 'mcq' ? 'MCQ' : 'Fill Blank'}
+                          </span>
+                          <span className={`px-2 py-1 rounded-md text-[10px] font-display font-bold uppercase tracking-wider border ${q.difficulty === 'easy' ? 'bg-volt-500/10 text-volt-400 border-volt-500/20' : q.difficulty === 'medium' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-ember-500/10 text-ember-400 border-ember-500/20'}`}>
+                            {q.difficulty}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Backend Connection Notice */}
-      <div className="glass-card p-4 flex items-start gap-3">
+      <div className="glass-card p-4 flex items-start gap-3 mt-8">
         <div className="w-2 h-2 rounded-full bg-volt-500 mt-1.5 flex-shrink-0 animate-pulse" />
         <div>
           <p className="text-xs font-semibold text-ink-300 font-display">Backend API Status</p>

@@ -42,6 +42,7 @@ def add_question(payload: schemas.QuestionCreate, db: Session = Depends(get_db))
 def list_questions(
     difficulty: Optional[str] = Query(None, description="Filter by difficulty: easy, medium, hard"),
     type: Optional[str] = Query(None, description="Filter by type: mcq, fill_blank"),
+    subject: Optional[str] = Query(None, description="Filter by subject"),
     db: Session = Depends(get_db),
 ):
     """
@@ -53,7 +54,7 @@ def list_questions(
     if type and type not in ("mcq", "fill_blank"):
         raise HTTPException(status_code=422, detail="type must be 'mcq' or 'fill_blank'")
 
-    return crud.get_all_questions(db, difficulty=difficulty, q_type=type)
+    return crud.get_all_questions(db, difficulty=difficulty, q_type=type, subject=subject)
 
 
 @router.get("/stats")
@@ -75,6 +76,13 @@ def get_stats(db: Session = Depends(get_db)):
         "fill_blank": fill_blank,
         "avg_score": avg_score
     }
+
+
+@router.get("/all-subjects", response_model=List[str])
+def get_subjects(db: Session = Depends(get_db)):
+    """Return all unique subject tags present in the question bank."""
+    rows = db.query(models.Question.subject).distinct().all()
+    return sorted([r[0] for r in rows if r[0]])
 
 
 @router.get("/{question_id}", response_model=schemas.QuestionResponse)

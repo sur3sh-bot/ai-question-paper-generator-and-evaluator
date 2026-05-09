@@ -45,7 +45,7 @@ export default function ResultCard({ result }) {
           </h3>
           {(test_id || created_at) && (
             <p className="text-xs text-ink-500 mt-0.5 font-body">
-              {test_id && `Test #${test_id}`}
+              {test_id && `${result.analytics?.test_subject || 'Test'} · ${test_id.slice(0, 8).toUpperCase()}`}
               {created_at && ` · ${new Date(created_at).toLocaleDateString()}`}
             </p>
           )}

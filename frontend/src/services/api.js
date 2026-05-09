@@ -7,7 +7,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  timeout: 600000, // 10 minutes — AI processing can take a while for large docs
 });
 
 // Request interceptor
@@ -61,16 +61,21 @@ export const questionsApi = {
     const response = await api.get('/questions/stats');
     return response.data;
   },
+
+  getSubjects: async () => {
+    const response = await api.get('/questions/all-subjects');
+    return response.data;
+  },
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 export const testsApi = {
   generate: async (options) => {
-    // backend expects { number_of_questions: int, difficulty: Optional[str] }
     const payload = {
       number_of_questions: options.num_questions,
       difficulty: options.difficulty === 'mixed' ? null : options.difficulty,
+      subject: options.subject || null,
     };
     const response = await api.post('/generate-test', payload);
     return response.data;

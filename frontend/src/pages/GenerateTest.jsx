@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   RiFlashlightLine, RiSettings3Line, RiCheckboxCircleLine,
-  RiEditLine, RiTimeLine, RiShieldLine,
+  RiEditLine, RiTimeLine, RiShieldLine, RiBookLine,
 } from 'react-icons/ri';
-import { testsApi } from '../services/api';
+import { testsApi, questionsApi } from '../services/api';
 import Toast from '../components/Toast';
 
 const difficultyOptions = [
@@ -40,13 +40,27 @@ export default function GenerateTest() {
     difficulty: 'mixed',
     question_types: 'mixed',
     time_limit: 30,
+    subject: '',
   });
+  const [subjects, setSubjects] = useState([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    questionsApi.getSubjects()
+      .then(data => setSubjects(data || []))
+      .catch(() => setSubjects([]))
+      .finally(() => setSubjectsLoading(false));
+  }, []);
 
   const showToast = (message, type = 'success') => setToast({ message, type });
 
   async function handleGenerate() {
+    if (!form.subject) {
+      showToast('Please select a subject before generating a test', 'error');
+      return;
+    }
     if (form.num_questions < 1 || form.num_questions > 100) {
       showToast('Number of questions must be between 1 and 100', 'error');
       return;
@@ -58,6 +72,7 @@ export default function GenerateTest() {
         difficulty: form.difficulty,
         question_types: form.question_types,
         time_limit: Number(form.time_limit),
+        subject: form.subject || null,
       };
       const data = await testsApi.generate(payload);
       const testId = data.id || data.test_id;
@@ -131,6 +146,43 @@ export default function GenerateTest() {
           </div>
         </div>
 
+        {/* Subject Selector */}
+        <div>
+          <label className="label-text flex items-center gap-1.5">
+            <RiBookLine className="text-volt-400" />
+            Subject
+            <span className="text-ember-400 ml-0.5">*</span>
+          </label>
+          {subjectsLoading ? (
+            <div className="input-field flex items-center gap-2 text-ink-500">
+              <span className="w-3.5 h-3.5 border-2 border-ink-600 border-t-ink-300 rounded-full animate-spin" />
+              Loading subjects...
+            </div>
+          ) : subjects.length === 0 ? (
+            <p className="text-xs text-ember-400 font-body mt-1">
+              No subjects found. Upload study material first.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2 mt-1">
+              {subjects.map(subj => (
+                <button
+                  key={subj}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, subject: subj }))}
+                  className={`px-4 py-2 rounded-xl border text-sm font-display font-600 transition-all duration-200
+                    ${
+                      form.subject === subj
+                        ? 'border-volt-500/70 bg-volt-500/15 text-volt-300'
+                        : 'border-ink-700/50 text-ink-500 hover:border-ink-500 hover:text-ink-300 bg-ink-800/40'
+                    }`}
+                >
+                  {subj}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Difficulty */}
         <div>
           <label className="label-text flex items-center gap-1.5">
@@ -188,10 +240,10 @@ export default function GenerateTest() {
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
           {[
+            { label: 'Subject', value: form.subject || '—' },
             { label: 'Questions', value: form.num_questions },
             { label: 'Time', value: `${form.time_limit}m` },
             { label: 'Difficulty', value: form.difficulty },
-            { label: 'Type', value: form.question_types },
           ].map(({ label, value }) => (
             <div key={label} className="bg-ink-800/60 rounded-xl px-3 py-2.5 border border-ink-700/40">
               <p className="text-[10px] text-ink-500 font-display uppercase tracking-widest">{label}</p>

@@ -16,12 +16,12 @@ Example cURL requests:
   curl http://localhost:8000/generate-test/<test_id>
 """
 
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-from app import crud, schemas
+from app import crud, schemas, models
 from app.database import get_db
 
 router = APIRouter(prefix="/generate-test", tags=["Test Generation"])
@@ -43,6 +43,7 @@ def generate_test(payload: schemas.GenerateTestRequest, db: Session = Depends(ge
             db,
             number_of_questions=payload.number_of_questions,
             difficulty=payload.difficulty,
+            subject=payload.subject,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -55,6 +56,7 @@ def generate_test(payload: schemas.GenerateTestRequest, db: Session = Depends(ge
         time_limit_seconds=test.time_limit_seconds,
         created_at=test.created_at,
     )
+
 
 
 @router.get("", response_model=List[schemas.GeneratedTestResponse])
