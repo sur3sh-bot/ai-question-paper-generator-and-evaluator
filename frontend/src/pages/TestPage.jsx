@@ -92,6 +92,8 @@ export default function TestPage() {
   const letters = ['A', 'B', 'C', 'D'];
 
   const progressPct = totalQ > 0 ? (answeredCount / totalQ) * 100 : 0;
+  const subjects = [...new Set(questions.map(q => q.subject).filter(Boolean))];
+  const testTitle = subjects.length === 1 ? subjects[0] : subjects.length > 1 ? 'Mixed Subjects' : 'Test';
 
   return (
     <div className="max-w-3xl mx-auto space-y-5 animate-fade-in">
@@ -101,7 +103,7 @@ export default function TestPage() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="font-display text-2xl font-bold text-ink-50">
-            {([...new Set(questions.map(q => q.subject).filter(Boolean))].length === 1 ? [...new Set(questions.map(q => q.subject).filter(Boolean))][0] : [...new Set(questions.map(q => q.subject).filter(Boolean))].length > 1 ? "Mixed Subjects" : "Test")} · {(id || '').slice(0, 8).toUpperCase()}
+            {testTitle}
           </h1>
           <p className="text-ink-500 text-sm font-body">
             {answeredCount}/{totalQ} answered
@@ -283,3 +285,4 @@ export default function TestPage() {
     </div>
   );
 }
+
