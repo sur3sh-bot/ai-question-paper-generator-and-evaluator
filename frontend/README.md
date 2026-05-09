@@ -1,16 +1,130 @@
-# React + Vite
+# AI Question Paper Generator & Evaluator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An AI-powered web application that generates question papers dynamically using FastAPI and React.  
+The system allows users to create tests based on difficulty, question type, and subject/topic.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- AI-based question generation
+- Dynamic test creation
+- MCQ and fill-in-the-blank support
+- Timer-based test interface
+- Progress tracking
+- Answer submission and evaluation
+- Modern React frontend
+- FastAPI backend API
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Frontend
+- React
+- Vite
+- React Router
+- TailwindCSS
+- Axios
+
+### Backend
+- FastAPI
+- Python
+- Uvicorn
+- OpenAI API (optional AI integration)
+
+---
+
+## Project Structure
+
+text project/ │ ├── frontend/ │   ├── src/ │   └── package.json │ ├── backend/ │   ├── app/ │   │   ├── main.py │   │   └── routes/ │   │       └── tests.py │   └── requirements.txt │ └── README.md 
+
+---
+
+# Frontend Setup
+
+## Install dependencies
+
+bash cd frontend npm install 
+
+## Run frontend
+
+bash npm run dev 
+
+Frontend runs on:
+
+text http://localhost:5173 
+
+---
+
+# Backend Setup
+
+## Create virtual environment
+
+bash cd backend python3 -m venv venv 
+
+## Activate virtual environment
+
+### macOS/Linux
+
+bash source venv/bin/activate 
+
+### Windows
+
+bash venv\Scripts\activate 
+
+---
+
+## Install dependencies
+
+bash pip install -r requirements.txt 
+
+---
+
+## Run backend server
+
+bash uvicorn app.main:app --reload 
+
+Backend runs on:
+
+text http://127.0.0.1:8000 
+
+---
+
+# API Endpoints
+
+## Generate Test
+
+http POST /generate-test 
+
+### Example Request
+
+json {   "num_questions": 10,   "difficulty": "medium",   "question_types": ["mcq"],   "topic": "Operating Systems" } 
+
+---
+
+# Future Improvements
+
+- Real AI-generated questions using Minimax
+- PDF upload support
+- Automatic evaluation and scoring
+- Database integration
+- Authentication system
+- Result analytics dashboard
+
+---
+
+# AI Integration
+
+The backend is designed to support AI model integration using:
+- OpenAI API
+- Gemini API
+- Ollama / Local LLMs
+
+Currently, placeholder questions are generated for testing purposes.
+
+---
+
+# Authors
+
+Developed as a group project for academic purposes.
