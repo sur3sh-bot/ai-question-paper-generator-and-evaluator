@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import Navbar from './components/Navbar';
 
-import Dashboard from './pages/Dashboard';
+import Dashboard from './pages/Dashboard'; # This is the main dashboard page that shows an overview of the system and recent activity.
 import QuestionManager from './pages/QuestionManager';
 import GenerateTest from './pages/GenerateTest';
 import TestPage from './pages/TestPage';

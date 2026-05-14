@@ -2,13 +2,13 @@
 Quick smoke test -- sends a tiny text chunk to the AI and prints the result.
 Run:  python test_ai.py
 """
-import sys, os
+import sys, os # Needed for modifying the system path to import local modules
 sys.path.insert(0, os.path.dirname(__file__))
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from app.ai.question_generator import generate_questions_from_chunk
+from app.ai.question_generator import generate_questions_from_chunk # Needed to test the AI question generation function
 
 SAMPLE_TEXT = """
 Photosynthesis is the process by which green plants convert sunlight into
