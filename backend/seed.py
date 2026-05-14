@@ -6,7 +6,7 @@ Usage:
     python seed.py
 """
 
-import sys
+import sys # Needed for modifying the system path to import local modules
 import os
 
 # Allow running from the backend/ directory

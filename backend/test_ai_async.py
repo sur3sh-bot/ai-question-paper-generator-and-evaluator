@@ -1,6 +1,6 @@
-import asyncio
-import sys, os
-import logging
+import asyncio # Needed for async functions and running the main function
+import sys, os # Needed for modifying the system path to import local modules
+import logging # Needed for logging debug information during the test
 logging.basicConfig(level=logging.DEBUG)
 sys.path.insert(0, os.path.dirname(__file__))
 
